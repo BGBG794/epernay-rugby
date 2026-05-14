@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Déploiement Render — EPERNAY Rugby</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #07090D; --bg-1: #0D1117; --bg-2: #141A22; --bg-3: #1B232E;
+    --line-1: rgba(255,255,255,.07); --line-2: rgba(255,255,255,.13); --line-3: rgba(255,255,255,.22);
+    --text-1: #F5F7FA; --text-2: #C5CBD4; --text-3: #8B939F; --text-4: #5A6470;
+    --club-primary: #0B2A4A; --club-secondary: #C8102E;
+    --win: #7CB342;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg-0); color: var(--text-1); font-family: "Archivo", system-ui, sans-serif; min-height: 100vh; }
+  body { padding: 40px 24px 80px; line-height: 1.55; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  .display { font-family: "Bebas Neue", sans-serif; }
+  .mono { font-family: "JetBrains Mono", monospace; font-feature-settings: "tnum"; }
+
+  header { margin-bottom: 36px; padding-bottom: 22px; border-bottom: 1px solid var(--line-1); }
+  header .logo { display: inline-flex; align-items: center; gap: 10px; padding: 6px 12px; background: linear-gradient(135deg, var(--club-primary), var(--club-secondary)); border-radius: 6px; font-family: "Bebas Neue", sans-serif; font-size: 14px; letter-spacing: .04em; margin-bottom: 14px; }
+  header h1 { font-family: "Bebas Neue", sans-serif; font-size: 38px; font-weight: 400; letter-spacing: .015em; line-height: 1.1; margin-bottom: 6px; }
+  header .sub { font-size: 14px; color: var(--text-3); }
+  header .sub a { color: var(--club-secondary); text-decoration: none; }
+  header .sub a:hover { text-decoration: underline; }
+
+  section { margin-bottom: 32px; }
+  h2 { font-family: "Bebas Neue", sans-serif; font-size: 22px; font-weight: 400; letter-spacing: .03em; color: var(--text-1); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+  h2 .num { width: 28px; height: 28px; border-radius: 50%; background: var(--club-secondary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; font-family: "Archivo", sans-serif; }
+
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .setting { padding: 12px 14px; background: var(--bg-2); border: 1px solid var(--line-1); border-radius: 8px; }
+  .setting .k { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--text-4); margin-bottom: 4px; font-weight: 700; }
+  .setting .v { font-family: "JetBrains Mono", monospace; font-size: 13px; color: var(--text-1); font-weight: 600; }
+
+  .cmd { background: var(--bg-2); border: 1px solid var(--line-1); border-radius: 8px; padding: 14px 50px 14px 18px; font-family: "JetBrains Mono", monospace; font-size: 13px; color: var(--text-1); position: relative; overflow-x: auto; white-space: pre; margin-bottom: 14px; }
+  .cmd .copy { position: absolute; top: 10px; right: 10px; padding: 5px 9px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 5px; font-family: "Archivo", sans-serif; font-size: 10.5px; font-weight: 600; color: var(--text-2); cursor: pointer; text-transform: uppercase; letter-spacing: .06em; }
+  .cmd .copy:hover { color: var(--text-1); border-color: var(--line-3); }
+  .cmd .copy.done { color: var(--win); border-color: var(--win); }
+
+  .env-table { border: 1px solid var(--line-1); border-radius: 8px; overflow: hidden; }
+  .env-row { display: grid; grid-template-columns: 220px 1fr; gap: 0; }
+  .env-row + .env-row { border-top: 1px solid var(--line-1); }
+  .env-row .k { padding: 12px 14px; background: var(--bg-2); font-family: "JetBrains Mono", monospace; font-size: 12.5px; font-weight: 700; color: var(--club-secondary); display: flex; align-items: center; }
+  .env-row .vbox { padding: 12px 50px 12px 14px; background: var(--bg-1); font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--text-1); position: relative; overflow-x: auto; white-space: nowrap; }
+  .env-row .vbox .copy { position: absolute; top: 9px; right: 9px; padding: 4px 8px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 4px; font-family: "Archivo", sans-serif; font-size: 10px; font-weight: 600; color: var(--text-2); cursor: pointer; text-transform: uppercase; letter-spacing: .06em; }
+  .env-row .vbox .copy:hover { color: var(--text-1); }
+  .env-row .vbox .copy.done { color: var(--win); border-color: var(--win); }
+
+  .checklist { background: var(--bg-1); border: 1px solid var(--line-1); border-radius: 10px; padding: 18px 22px; }
+  .checklist ol { list-style: none; counter-reset: c; }
+  .checklist li { counter-increment: c; padding: 9px 0 9px 38px; position: relative; font-size: 14px; color: var(--text-2); border-bottom: 1px solid var(--line-1); }
+  .checklist li:last-child { border-bottom: 0; }
+  .checklist li::before { content: counter(c); position: absolute; left: 0; top: 9px; width: 24px; height: 24px; border-radius: 50%; background: var(--bg-3); color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; font-family: "JetBrains Mono", monospace; font-size: 11.5px; font-weight: 700; }
+  .checklist li code { background: var(--bg-2); padding: 1px 6px; border-radius: 3px; font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--club-secondary); }
+  .checklist li strong { color: var(--text-1); }
+
+  .notes { font-size: 12.5px; color: var(--text-3); line-height: 1.6; }
+  .notes p { padding-left: 14px; border-left: 2px solid var(--line-2); margin-bottom: 8px; }
+  .notes p strong { color: var(--text-1); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">REC · EPERNAY RUGBY</div>
+    <h1>Déploiement sur Render</h1>
+    <div class="sub">Repo : <a href="https://github.com/BGBG794/epernay-rugby" target="_blank">github.com/BGBG794/epernay-rugby</a></div>
+  </header>
+
+  <section>
+    <h2><span class="num">1</span>Settings du Web Service</h2>
+    <div class="settings-grid">
+      <div class="setting"><div class="k">Repository</div><div class="v">BGBG794/epernay-rugby</div></div>
+      <div class="setting"><div class="k">Branch</div><div class="v">main</div></div>
+      <div class="setting"><div class="k">Region</div><div class="v">Frankfurt (EU Central)</div></div>
+      <div class="setting"><div class="k">Runtime</div><div class="v">Python 3</div></div>
+      <div class="setting"><div class="k">Plan</div><div class="v">Free</div></div>
+      <div class="setting"><div class="k">Root Directory</div><div class="v">(vide)</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">2</span>Build Command</h2>
+    <div class="cmd"><button class="copy" data-target="cmd-build">Copier</button><span id="cmd-build">pip install -r requirements.txt</span></div>
+  </section>
+
+  <section>
+    <h2><span class="num">3</span>Start Command</h2>
+    <div class="cmd"><button class="copy" data-target="cmd-start">Copier</button><span id="cmd-start">uvicorn server:app --host 0.0.0.0 --port $PORT</span></div>
+  </section>
+
+  <section>
+    <h2><span class="num">4</span>Environment Variables</h2>
+    <div class="env-table">
+      <div class="env-row">
+        <div class="k">NEON_URL</div>
+        <div class="vbox"><button class="copy" data-target="env-neon">Copier</button><span id="env-neon">postgresql://neondb_owner:npg_gGLbRFKdme28@ep-misty-credit-aqm0oae5-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&amp;channel_binding=require</span></div>
+      </div>
+      <div class="env-row">
+        <div class="k">ANTHROPIC_API_KEY</div>
+        <div class="vbox"><span id="env-anthropic" style="color:var(--text-3);">(récupérer depuis ~/scuf-sync/.env localement)</span></div>
+      </div>
+      <div class="env-row">
+        <div class="k">PYTHON_VERSION</div>
+        <div class="vbox"><button class="copy" data-target="env-py">Copier</button><span id="env-py">3.11</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">5</span>Étapes</h2>
+    <div class="checklist">
+      <ol>
+        <li>Dashboard Render → <strong>New +</strong> → <strong>Web Service</strong></li>
+        <li>Connecte le repo <code>BGBG794/epernay-rugby</code></li>
+        <li>Colle les <strong>Build Command</strong> et <strong>Start Command</strong> ci-dessus</li>
+        <li>Ouvre l'onglet <strong>Environment</strong> → ajoute les 3 variables</li>
+        <li>Choisis le plan <strong>Free</strong></li>
+        <li>Clique <strong>Create Web Service</strong> · build ~2 min</li>
+        <li>L'URL sera <code>https://epernay-rugby.onrender.com</code></li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <h2>Notes</h2>
+    <div class="notes">
+      <p><strong>Cold start :</strong> Free tier Render met le service en veille après 15 min d'inactivité. 30s pour réveiller au prochain hit.</p>
+      <p><strong>Neon :</strong> Free tier suspend la DB après 5 min inactivité, réveil ~1s. Premier appel API peut paraître lent.</p>
+      <p><strong>Logs :</strong> Cherche <code>Application startup complete</code> dans les Render logs pour confirmer que tout est OK.</p>
+      <p><strong>Syncs récurrents :</strong> Pour automatiser <code>ffr_sync.py</code> (classement) ou <code>sync.py</code> (Tisini), ajouter un <strong>Render Cron Job</strong> sur le même repo.</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+document.querySelectorAll(".copy").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const txt = document.getElementById(btn.dataset.target).textContent;
+    await navigator.clipboard.writeText(txt);
+    const orig = btn.textContent;
+    btn.textContent = "Copié ✓";
+    btn.classList.add("done");
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove("done"); }, 1500);
+  });
+});
+</script>
+</body>
+</html>
