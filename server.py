@@ -350,15 +350,15 @@ def dashboard():
     """)
     out["top_tacklers"] = cur.fetchall()
 
-    # Season totals
+    # Season totals — single query, no correlated subqueries
     cur.execute("""
         SELECT
           (SELECT count(*) FROM fixtures WHERE (team1_id=764 OR team2_id=764) AND home_points IS NOT NULL) AS matches_played,
           (SELECT count(*) FROM fixture_events WHERE team_id=764 AND event_name='Score' AND subevent_id IN ('66','200')) AS total_tries,
           (SELECT sum(CASE WHEN team1_id=764 THEN home_points ELSE away_points END)
              FROM fixtures WHERE (team1_id=764 OR team2_id=764) AND home_points IS NOT NULL) AS pts_scored,
-          (SELECT count(*) FROM team_players tp WHERE tp.team_id=764
-             AND (SELECT count(*) FROM lineups l WHERE l.player_id = tp.player_id) >= 1) AS active_players
+          (SELECT count(DISTINCT l.player_id) FROM lineups l
+             JOIN team_players tp ON tp.player_id = l.player_id AND tp.team_id=764) AS active_players
     """)
     out["totals"] = cur.fetchone()
 

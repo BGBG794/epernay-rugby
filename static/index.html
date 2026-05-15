@@ -939,8 +939,14 @@ document.querySelectorAll("#nav button").forEach(b => {
 let squadLoaded = false, allPlayers = [], squadFilter = "regulars";
 async function loadSquad() {
   squadLoaded = true;
-  const r = await fetch("/api/players").then(r => r.json());
-  allPlayers = r;
+  try {
+    const res = await fetch("/api/players");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    allPlayers = await res.json();
+  } catch (e) {
+    $("#squad-body").innerHTML = `<div class="empty-state-screen"><h3 style="color:var(--loss)">Erreur ${escape(e.message)}</h3></div>`;
+    return;
+  }
   renderSquad();
 }
 function renderSquad() {
@@ -1016,8 +1022,16 @@ document.addEventListener("click", e => {
 let dashLoaded = false;
 async function loadDash() {
   dashLoaded = true;
-  const d = await fetch("/api/dashboard").then(r => r.json());
   const root = $("#dash-content");
+  let d;
+  try {
+    const res = await fetch("/api/dashboard");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    d = await res.json();
+  } catch (e) {
+    root.innerHTML = `<div class="empty-state-screen" style="margin:auto"><h3 style="color:var(--loss)">Erreur ${escape(e.message)}</h3><p>L'endpoint /api/dashboard est tombé. Vérifie les logs Render et la connexion Neon.</p></div>`;
+    return;
+  }
   const lm = d.last_match;
   const isHomeUs = lm && lm.team1_id === 764;
   const ourScore = lm ? (isHomeUs ? lm.home_points : lm.away_points) : null;
@@ -1226,8 +1240,14 @@ const LB_LABELS = {
 
 async function loadStats() {
   statsLoaded = true;
-  const d = await fetch("/api/stats").then(r => r.json());
-  statsData = d;
+  try {
+    const res = await fetch("/api/stats");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    statsData = await res.json();
+  } catch (e) {
+    $("#stats-content").innerHTML = `<div class="empty-state-screen"><h3 style="color:var(--loss)">Erreur ${escape(e.message)}</h3><p>L'endpoint /api/stats est tombé.</p></div>`;
+    return;
+  }
   renderStats();
 }
 
