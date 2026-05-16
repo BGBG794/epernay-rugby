@@ -183,6 +183,34 @@ def clips(q: str = Query(..., min_length=1)):
         "clips": out
     })
 
+@app.get("/api/health")
+def health():
+    """Quick diagnostic to identify deployment issues."""
+    out = {"server": "ok", "env": {}}
+    out["env"]["NEON_URL_set"] = bool(os.environ.get("NEON_URL"))
+    out["env"]["ANTHROPIC_KEY_set"] = bool(os.environ.get("ANTHROPIC_API_KEY"))
+    out["env"]["PORT"] = os.environ.get("PORT")
+    try:
+        conn = psycopg2.connect(DB, connect_timeout=5)
+        cur = conn.cursor()
+        cur.execute("SELECT version()")
+        out["db"] = {"status": "ok", "version": cur.fetchone()[0]}
+        cur.execute("""
+            SELECT to_regclass('public.fixtures') AS fixtures,
+                   to_regclass('public.players') AS players,
+                   to_regclass('public.fixture_events') AS events,
+                   to_regclass('public.standings_ffr') AS standings_ffr,
+                   to_regclass('public.fixture_videos') AS videos
+        """)
+        r = cur.fetchone()
+        out["tables"] = {"fixtures": r[0], "players": r[1], "events": r[2], "standings_ffr": r[3], "videos": r[4]}
+        cur.execute("SELECT count(*) FROM fixtures")
+        out["fixtures_count"] = cur.fetchone()[0]
+        cur.close(); conn.close()
+    except Exception as e:
+        out["db"] = {"status": "error", "msg": str(e)}
+    return out
+
 @app.get("/api/stats")
 def stats(team_id: int = 764):
     """Season stats aggregates."""
@@ -298,13 +326,18 @@ def stats(team_id: int = 764):
 
 @app.get("/api/dashboard")
 def dashboard():
-    """Aggregated home dashboard data for EPERNAY."""
+    """Aggregated home dashboard data for EPERNAY. Each section is independent."""
     conn = psycopg2.connect(DB)
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    out = {}
+    out = {"errors": []}
 
-    # Last match
-    cur.execute("""
+    def safe(label, fn):
+        try: return fn()
+        except Exception as e:
+            out["errors"].append(f"{label}: {e}")
+            return None
+
+    out["last_match"] = safe("last_match", lambda: (cur.execute("""
         SELECT f.id, f.team1_name, f.team2_name, f.team1_id, f.team2_id, f.game_date,
                f.home_points, f.away_points, f.venue,
                (SELECT platform FROM fixture_videos fv WHERE fv.fixture_id = f.id
@@ -312,18 +345,15 @@ def dashboard():
         FROM fixtures f
         WHERE (f.team1_id = 764 OR f.team2_id = 764) AND f.home_points IS NOT NULL
         ORDER BY f.game_date DESC NULLS LAST LIMIT 1
-    """)
-    out["last_match"] = cur.fetchone()
+    """), cur.fetchone())[1])
 
-    # Standings excerpt (FFR if available)
-    cur.execute("""
+    # Standings excerpt — gracefully empty if table missing
+    out["standings"] = safe("standings", lambda: (cur.execute("""
         SELECT position, team_name, pts, j, g, n, p, is_us
         FROM standings_ffr ORDER BY pts DESC NULLS LAST
-    """)
-    out["standings"] = cur.fetchall()
+    """), cur.fetchall())[1]) or []
 
-    # Top scorers (tries)
-    cur.execute("""
+    out["top_scorers"] = safe("top_scorers", lambda: (cur.execute("""
         SELECT p.id, p.first_name, p.sir_name, p.current_position,
                tp.current_jersey_no AS jersey,
                count(*) AS tries
@@ -333,11 +363,9 @@ def dashboard():
         WHERE fe.team_id = 764 AND fe.event_name = 'Score' AND fe.subevent_id IN ('66','200')
         GROUP BY p.id, p.first_name, p.sir_name, p.current_position, tp.current_jersey_no
         ORDER BY tries DESC LIMIT 5
-    """)
-    out["top_scorers"] = cur.fetchall()
+    """), cur.fetchall())[1]) or []
 
-    # Top tacklers
-    cur.execute("""
+    out["top_tacklers"] = safe("top_tacklers", lambda: (cur.execute("""
         SELECT p.id, p.first_name, p.sir_name, p.current_position,
                tp.current_jersey_no AS jersey,
                count(*) AS tackles
@@ -347,11 +375,9 @@ def dashboard():
         WHERE fe.team_id = 764 AND fe.event_name IN ('Tackle','Tackles')
         GROUP BY p.id, p.first_name, p.sir_name, p.current_position, tp.current_jersey_no
         ORDER BY tackles DESC LIMIT 5
-    """)
-    out["top_tacklers"] = cur.fetchall()
+    """), cur.fetchall())[1]) or []
 
-    # Season totals — single query, no correlated subqueries
-    cur.execute("""
+    out["totals"] = safe("totals", lambda: (cur.execute("""
         SELECT
           (SELECT count(*) FROM fixtures WHERE (team1_id=764 OR team2_id=764) AND home_points IS NOT NULL) AS matches_played,
           (SELECT count(*) FROM fixture_events WHERE team_id=764 AND event_name='Score' AND subevent_id IN ('66','200')) AS total_tries,
@@ -359,8 +385,7 @@ def dashboard():
              FROM fixtures WHERE (team1_id=764 OR team2_id=764) AND home_points IS NOT NULL) AS pts_scored,
           (SELECT count(DISTINCT l.player_id) FROM lineups l
              JOIN team_players tp ON tp.player_id = l.player_id AND tp.team_id=764) AS active_players
-    """)
-    out["totals"] = cur.fetchone()
+    """), cur.fetchone())[1]) or {}
 
     cur.close(); conn.close()
     # Cast Decimal to float
